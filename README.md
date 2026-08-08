@@ -9,6 +9,9 @@ the repository (or create a Python Web Service manually) and use:
 - Start command: `gunicorn --config gunicorn.conf.py app:app`
 
 Set a random `SECRET_KEY` environment variable in the Render dashboard.
+Also set `PYTHON_VERSION` to `3.11.9` in the dashboard and redeploy with
+**Clear build cache**. This is required for the compatible CPU-only PyTorch
+wheels; an existing dashboard environment variable overrides `render.yaml`.
 
 The service intentionally uses one Gunicorn worker and resizes each uploaded
 image to a maximum of 256 × 256 before inference. The original 512-pixel CPU
