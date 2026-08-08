@@ -6,9 +6,8 @@ Pillow==12.0.0
 # Render has no GPU. Pin CPU-only wheels so pip does not install the 2+ GB CUDA
 # runtime packages that can leave too little disk and memory for inference.
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
-tqdm==4.66.4
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
 Werkzeug==3.1.4
 WTForms==3.2.1
 gunicorn

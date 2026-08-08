@@ -8,7 +8,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
-        value: 3.11.9
+        value: 3.12
       - key: INFERENCE_SIZE
         value: 256
       - key: TORCH_NUM_THREADS

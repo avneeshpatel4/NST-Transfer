@@ -1,5 +1,7 @@
 import os
 import uuid
+import base64
+import io
 import torch
 from flask import Flask, render_template, request, send_from_directory
 from flask_wtf import FlaskForm
@@ -15,6 +17,7 @@ from utils.utils import adaptive_instance_normalization, calc_mean_std
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IS_VERCEL = bool(os.environ.get('VERCEL') or os.environ.get('VERCEL_ENV'))
 
 # Render's entry-level instances are CPU-only and memory constrained.  Keeping
 # inference images bounded prevents one request from exhausting the worker.
@@ -23,7 +26,12 @@ MAX_UPLOAD_MB = int(os.environ.get('MAX_UPLOAD_MB', '10'))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-secret-in-production')
-app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'static', 'uploads')
+# Vercel functions have a read-only project directory.  ``/tmp`` is the only
+# writable location and is intentionally treated as temporary storage.
+app.config['UPLOAD_FOLDER'] = (
+    os.path.join('/tmp', 'nst-uploads') if IS_VERCEL
+    else os.path.join(BASE_DIR, 'static', 'uploads')
+)
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
 app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_MB * 1024 * 1024
 Bootstrap(app)
@@ -98,11 +106,21 @@ def save_image(image, path):
     image.save(path)
 
 
+def image_data_url(image):
+    """Return a small inline JPEG so serverless result downloads are reliable."""
+    image = image.cpu().clone().squeeze(0).clamp(0, 1)
+    buffer = io.BytesIO()
+    transforms.ToPILImage()(image).save(buffer, format='JPEG', quality=92)
+    encoded = base64.b64encode(buffer.getvalue()).decode('ascii')
+    return f'data:image/jpeg;base64,{encoded}'
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = UploadForm()
     result_image = None
+    result_url = None
     content_filename = None
     style_filename = None
     error = None
@@ -140,6 +158,8 @@ def index():
                 save_image(stylized_image, result_path)
                 
                 result_image = result_filename
+                if IS_VERCEL:
+                    result_url = image_data_url(stylized_image)
             except Exception as e:
                 error = str(e)
     elif request.method == 'POST':
@@ -148,7 +168,7 @@ def index():
         if not style_filename:
             error = 'Please upload style image'
 
-    return render_template('index.html', form=form, result_image=result_image, content_image=content_filename,
+    return render_template('index.html', form=form, result_image=result_image, result_url=result_url, content_image=content_filename,
                            style_image=style_filename, error=error)
 
 
