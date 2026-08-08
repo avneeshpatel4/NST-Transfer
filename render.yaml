@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: adain-style-transfer
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --config gunicorn.conf.py app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: INFERENCE_SIZE
+        value: 256
+      - key: TORCH_NUM_THREADS
+        value: 2
